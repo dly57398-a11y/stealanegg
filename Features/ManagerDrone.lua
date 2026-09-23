@@ -2,9 +2,10 @@
 -- YOKUDO HUB | FEATURE | Manager Drone
 -- គ្រប់គ្រង Event → ហៅ Attack ឬ AFK
 -- ✅ Event ចេញ → Stop AFK → Jump Out → Call Attack
+--    (AttackDrone គ្រប់គ្រង Fly TP ទៅ Safe Zone ខ្លួនឯង)
 -- ✅ Event Sec <= 10 → Stop Attack → Call AFK
 -- ✅ Stop ពេល Disable
--- ✅ Register ជាមួយ CharacterSystem
+-- ✅ Restart ពេល Character Added
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -68,10 +69,13 @@ end
 
 -- ==================================================
 -- SWITCH FROM AFK TO ATTACK
+-- Event ចេញ → Stop AFK → Jump Out → Call Attack
+-- AttackDrone គ្រប់គ្រង Fly TP ទៅ Safe Zone ខ្លួនឯង
 -- ==================================================
 local function SwitchAFKToAttack()
     print("[ManagerDrone] Event Detected → Switch AFK to Attack")
 
+    -- 1. រក Treadmill Pos
     local TreadmillPos = nil
     if _G.YOKUDO_AFKSystem then
         TreadmillPos = _G.YOKUDO_AFKSystem.GetMyTreadmillPos()
@@ -96,16 +100,19 @@ local function SwitchAFKToAttack()
         return
     end
 
+    -- 2. Jump ចេញពី Treadmill រហូតដល់ Dist > 5
     print("[ManagerDrone] Jumping out of Treadmill...")
     _G.YOKUDO_AFKSystem.JumpOutTreadmill(TreadmillPos, function()
         print("[ManagerDrone] ✅ Jumped out!")
 
+        -- 3. Stop AFK (បិទ AFKEnabled → FlyTP របស់ AFKSystem ឈប់)
         if _G.YOKUDO_AFKSystem then
             _G.YOKUDO_AFKSystem.Disable()
         end
 
         task.wait(AFK_JUMP_WAIT)
 
+        -- 4. ហៅ Attack Drone (AttackDrone គ្រប់គ្រង Fly TP ទៅ Safe Zone ខ្លួនឯង)
         print("[ManagerDrone] Call Attack Drone → Fly TP to Safe Zone → Spawn Loop")
         if _G.YOKUDO_AttackDrone then
             _G.YOKUDO_AttackDrone.Start()
@@ -126,6 +133,9 @@ local function MainLoop()
 
         print("[ManagerDrone] Text:", EventText, "| Sec:", EventSec, "| IsActive:", IsEventActive, "| NotActive:", EventNotActive, "| StopAttack:", EventStopAttack, "| Active:", EventActive)
 
+        -- ==================================================
+        -- Event មិនទាន់ចេញ (Text = "in Xm Ys") → AFK System
+        -- ==================================================
         if EventNotActive then
             if _G.YOKUDO_AttackDrone and _G.YOKUDO_AttackDrone.IsEnabled() then
                 print("[ManagerDrone] Event Not Active → Stop Attack")
@@ -136,6 +146,9 @@ local function MainLoop()
                 print("[ManagerDrone] Event Not Active → AFK System")
                 _G.YOKUDO_AFKSystem.Enable()
             end
+        -- ==================================================
+        -- Event ជិតចប់ (Sec <= 10) → Stop Attack → AFK
+        -- ==================================================
         elseif EventStopAttack then
             if _G.YOKUDO_AttackDrone and _G.YOKUDO_AttackDrone.IsEnabled() then
                 print("[ManagerDrone] Event <= 10s → Stop Attack → AFK System")
@@ -145,6 +158,9 @@ local function MainLoop()
             if _G.YOKUDO_AFKSystem and not _G.YOKUDO_AFKSystem.IsEnabled() then
                 _G.YOKUDO_AFKSystem.Enable()
             end
+        -- ==================================================
+        -- Event ចេញ (Sec > 10) → Switch AFK → Attack
+        -- ==================================================
         elseif EventActive then
             if _G.YOKUDO_AFKSystem and _G.YOKUDO_AFKSystem.IsEnabled() then
                 print("[ManagerDrone] Event Active → Switch AFK to Attack")
@@ -204,6 +220,28 @@ local function ToggleManager()
 end
 
 -- ==================================================
+-- AUTO RE-APPLY ON CHARACTER ADDED
+-- ==================================================
+Player.CharacterAdded:Connect(function(Char)
+    if ManagerEnabled then
+        print("[ManagerDrone] Character Added → Restarting Manager...")
+        task.wait(1)
+
+        LastEventSec = 0
+        LastEventText = ""
+
+        if ManagerThread then
+            pcall(function() task.cancel(ManagerThread) end)
+            ManagerThread = nil
+        end
+
+        ManagerThread = task.spawn(function() MainLoop() end)
+
+        print("[ManagerDrone] ✅ Re-applied on new Character")
+    end
+end)
+
+-- ==================================================
 -- EXPORT
 -- ==================================================
 _G.YOKUDO_ManagerDrone = {
@@ -216,30 +254,4 @@ _G.YOKUDO_ManagerDrone = {
     SwitchAFKToAttack = SwitchAFKToAttack,
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "ManagerDrone",
-        Enable = EnableManager,
-        Disable = DisableManager,
-        IsEnabled = function() return ManagerEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            if ManagerEnabled then
-                task.wait(1)
-                LastEventSec = 0
-                LastEventText = ""
-
-                if ManagerThread then
-                    pcall(function() task.cancel(ManagerThread) end)
-                    ManagerThread = nil
-                end
-
-                ManagerThread = task.spawn(function() MainLoop() end)
-            end
-        end
-    })
-end
-
-print("✅ ManagerDrone Feature Loaded (Switch AFK to Attack + Register)")
+print("✅ ManagerDrone Feature Loaded (Switch AFK to Attack)")
