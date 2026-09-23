@@ -1,8 +1,9 @@
 --==================================================
 -- YOKUDO HUB - CONFIG SYSTEM
--- Save/Load: SelectedMethod + TeleportSpeed + AttackDroneEnabled
+-- Save/Load: SelectedMethod + TeleportSpeed
 -- Folder: YOKUDO-SAE
 -- File: yokudo.json
+-- ✅ ដក AttackDroneEnabled ចេញ
 --==================================================
 
 local HttpService = game:GetService("HttpService")
@@ -16,8 +17,7 @@ local CONFIG_FILE = CONFIG_FOLDER .. "/yokudo.json"
 
 local DefaultConfig = {
     SelectedMethod = "TeleportFly",
-    TeleportSpeed = 300,
-    AttackDroneEnabled = false
+    TeleportSpeed = 300
 }
 
 --==================================================
@@ -82,11 +82,7 @@ local function LoadConfig()
         Config.TeleportSpeed = math.clamp(DecodedData.TeleportSpeed, 50, 1100)
     end
 
-    if type(DecodedData.AttackDroneEnabled) == "boolean" then
-        Config.AttackDroneEnabled = DecodedData.AttackDroneEnabled
-    end
-
-    print("[YOKUDO] Config Loaded | Method: " .. Config.SelectedMethod .. " | Speed: " .. tostring(Config.TeleportSpeed) .. " | Drone: " .. tostring(Config.AttackDroneEnabled))
+    print("[YOKUDO] Config Loaded | Method: " .. Config.SelectedMethod .. " | Speed: " .. tostring(Config.TeleportSpeed))
 
     return Config
 end
@@ -100,8 +96,7 @@ local function SaveConfig(Config)
 
     local DataToSave = {
         SelectedMethod = Config.SelectedMethod or DefaultConfig.SelectedMethod,
-        TeleportSpeed = Config.TeleportSpeed or DefaultConfig.TeleportSpeed,
-        AttackDroneEnabled = Config.AttackDroneEnabled or DefaultConfig.AttackDroneEnabled
+        TeleportSpeed = Config.TeleportSpeed or DefaultConfig.TeleportSpeed
     }
 
     local EncodeSuccess, EncodedData = pcall(function()
@@ -118,7 +113,7 @@ local function SaveConfig(Config)
     end)
 
     if WriteSuccess then
-        print("[YOKUDO] Config Saved | Method: " .. DataToSave.SelectedMethod .. " | Speed: " .. tostring(DataToSave.TeleportSpeed) .. " | Drone: " .. tostring(DataToSave.AttackDroneEnabled))
+        print("[YOKUDO] Config Saved | Method: " .. DataToSave.SelectedMethod .. " | Speed: " .. tostring(DataToSave.TeleportSpeed))
         return true
     else
         warn("[YOKUDO] Failed to write config")
@@ -133,7 +128,6 @@ end
 local function ApplyConfig(Config)
     _G.YOKUDO_SelectedMethod = Config.SelectedMethod
     _G.YOKUDO_TeleportSpeed = Config.TeleportSpeed
-    _G.YOKUDO_AttackDroneEnabled = Config.AttackDroneEnabled
 end
 
 --==================================================
@@ -159,23 +153,6 @@ _G.YOKUDO_ConfigSystem = {
         task.spawn(function()
             task.wait(0.5)
 
-            -- ✅ Auto Enable Attack Drone
-            if Config.AttackDroneEnabled == true then
-                if _G.YOKUDO_ManagerDrone then
-                    print("[YOKUDO] Auto Enable Attack Drone from Config")
-                    pcall(function()
-                        _G.YOKUDO_ManagerDrone.Enable()
-                    end)
-                end
-            end
-
-            task.wait(0.5)
-
-            -- ✅ Update Event Tab UI
-            if _G.YOKUDO_RefreshEventUI then
-                _G.YOKUDO_RefreshEventUI()
-            end
-
             -- ✅ Update Setting Tab UI
             if _G.YOKUDO_RefreshSettingUI then
                 _G.YOKUDO_RefreshSettingUI()
@@ -188,8 +165,7 @@ _G.YOKUDO_ConfigSystem = {
     Save = function()
         local Config = {
             SelectedMethod = _G.YOKUDO_SelectedMethod or DefaultConfig.SelectedMethod,
-            TeleportSpeed = _G.YOKUDO_TeleportSpeed or DefaultConfig.TeleportSpeed,
-            AttackDroneEnabled = _G.YOKUDO_AttackDroneEnabled or DefaultConfig.AttackDroneEnabled
+            TeleportSpeed = _G.YOKUDO_TeleportSpeed or DefaultConfig.TeleportSpeed
         }
         return SaveConfig(Config)
     end,
@@ -197,8 +173,7 @@ _G.YOKUDO_ConfigSystem = {
     Get = function()
         return {
             SelectedMethod = _G.YOKUDO_SelectedMethod or DefaultConfig.SelectedMethod,
-            TeleportSpeed = _G.YOKUDO_TeleportSpeed or DefaultConfig.TeleportSpeed,
-            AttackDroneEnabled = _G.YOKUDO_AttackDroneEnabled or DefaultConfig.AttackDroneEnabled
+            TeleportSpeed = _G.YOKUDO_TeleportSpeed or DefaultConfig.TeleportSpeed
         }
     end,
 
@@ -208,4 +183,4 @@ _G.YOKUDO_ConfigSystem = {
     end
 }
 
-print("✅ ConfigSystem Loaded")
+print("✅ ConfigSystem Loaded (Method + Speed Only)")
