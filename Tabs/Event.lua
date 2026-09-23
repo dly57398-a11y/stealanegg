@@ -1,6 +1,7 @@
 --==================================================
 -- YOKUDO HUB | TAB | Event
 -- Feature: Auto Attack Drone
+-- ✅ ដក Auto Save Config ចេញ (ManagerDrone មិនពាក់ព័ន្ធ Config)
 --==================================================
 
 local TabsManager = _G.YOKUDO_TabsManager
@@ -96,19 +97,11 @@ ManagerButton.MouseButton1Click:Connect(function()
     local NewState = not _G.YOKUDO_ManagerDrone.IsEnabled()
     UpdateManagerUI(NewState)
 
-    -- ✅ Save State to _G
-    _G.YOKUDO_AttackDroneEnabled = NewState
-
-    -- ✅ Call Enable/Disable
+    -- ✅ Call Enable/Disable (មិន Save Config)
     if NewState then
         _G.YOKUDO_ManagerDrone.Enable()
     else
         _G.YOKUDO_ManagerDrone.Disable()
-    end
-
-    -- ✅ Save Config
-    if _G.YOKUDO_ConfigSystem then
-        _G.YOKUDO_ConfigSystem.Save()
     end
 end)
 
@@ -124,7 +117,7 @@ task.spawn(function()
 end)
 
 --==================================================
--- ✅ REFRESH FUNCTION (សម្រាប់ ConfigSystem ហៅ)
+-- ✅ REFRESH FUNCTION
 --==================================================
 _G.YOKUDO_RefreshEventUI = function()
     if _G.YOKUDO_ManagerDrone then
@@ -135,7 +128,7 @@ _G.YOKUDO_RefreshEventUI = function()
 end
 
 --==================================================
--- ✅ PERIODIC SYNC (រាល់ 1 វិនាទី)
+-- ✅ PERIODIC SYNC
 --==================================================
 task.spawn(function()
     while task.wait(1) do
