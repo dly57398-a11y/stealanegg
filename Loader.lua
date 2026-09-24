@@ -1,4 +1,23 @@
 -- ==================================================
+-- YOKUDO HUB | STEAL AN EGG | Loader
+-- ✅ Load CharacterSystem មុន Features
+-- ✅ VIPTP ជំនួស EggCheckPremium
+-- ==================================================
+
+local BASE_URL = "https://raw.githubusercontent.com/betdoyvaka/stealanegg/main/"
+
+_G.YOKUDO_EnablePrint = false
+
+local oldPrint = print
+print = function(...)
+    if _G.YOKUDO_EnablePrint then
+        oldPrint(...)
+    end
+end
+
+print("🔵 Loading YOKUDO HUB...")
+
+-- ==================================================
 -- CACHE SYSTEM
 -- ==================================================
 _G.YOKUDO_Cache = _G.YOKUDO_Cache or {}
