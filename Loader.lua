@@ -179,7 +179,7 @@ loadstring(GetScript("Tabs/Init.lua"))()
 -- ✅ LOAD CHARACTER SYSTEM (មុន Features)
 -- ==================================================
 Loading.Update(26)
-loadstring(GetScript("Features/CharacterSystem.lua"))()
+--loadstring(GetScript("Features/CharacterSystem.lua"))()
 
 if _G.YOKUDO_CharacterSystem then
     _G.YOKUDO_CharacterSystem:Init()
