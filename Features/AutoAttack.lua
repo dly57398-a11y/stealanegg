@@ -220,33 +220,5 @@ _G.YOKUDO_AutoAttack = {
     FindClosestPlayer = FindClosestPlayer
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "AutoAttack",
-        Enable = function()
-            if AutoEquipEnabled then EnableAutoEquip() end
-            if AutoHitEnabled then EnableAutoHit() end
-        end,
-        Disable = function()
-            DisableAutoEquip()
-            DisableAutoHit()
-        end,
-        IsEnabled = function()
-            return AutoEquipEnabled or AutoHitEnabled
-        end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            task.wait(1)
-            if AutoEquipEnabled then
-                pcall(function() EnableAutoEquip() end)
-            end
-            if AutoHitEnabled then
-                pcall(function() EnableAutoHit() end)
-            end
-        end
-    })
-end
 
 print("✅ AutoAttack Feature Loaded (Range 17 + Fast + Register)")
