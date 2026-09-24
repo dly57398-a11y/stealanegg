@@ -901,37 +901,5 @@ _G.YOKUDO_TeleportSystem = {
     GetTargetId = function() return TARGET_UID end
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "TeleportSystem",
-        Enable = Enable,
-        Disable = Disable,
-        IsEnabled = function() return Running end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            -- ✅ TeleportSystem ប្រើ GetHumanoid() រាល់ពេល
-            -- ដូច្នេះវាចាប់ Humanoid ថ្មីដោយស្វ័យប្រវត្តិ
-            -- ប៉ុន្តែបើកំពុងរត់ យើង Restart ដើម្បីធានា
-            if Running then
-                task.wait(1)
-                pcall(function()
-                    local Method = CurrentMethod
-                    local Speed = FLY_SPEED
-                    local TargetId = TARGET_UID
-                    Disable()
-                    task.wait(0.5)
-                    SetMethod(Method)
-                    SetSpeed(Speed)
-                    if TargetId then
-                        SetTargetId(TargetId)
-                    end
-                    Enable()
-                end)
-            end
-        end
-    })
-end
 
 print("✅ TeleportSystem Loaded (Dual Mode + Dual Option + Register)")
