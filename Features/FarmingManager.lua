@@ -36,7 +36,7 @@ local SAFE_WAIT_AFTER_REACH = 5
 local FLY_SPEED = 1000       -- ✅ សម្រាប់ TeleportSystem
 local SAFE_FLY_SPEED = 500   -- ✅ សម្រាប់ Fly ទៅ Safe Zone (ថ្មី)
 local RETURN_SPEED = 600
-local FLY_OFFSET = 7
+local FLY_OFFSET = 10
 local METHOD = "InstantTeleport"
 
 -- ==================================================
