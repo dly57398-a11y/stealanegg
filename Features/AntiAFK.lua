@@ -167,29 +167,5 @@ _G.YOKUDO_AntiAFK = {
     ZOOM_INTERVAL_MAX = ZOOM_INTERVAL_MAX
 }
 
---==================================================
--- REGISTER WITH CHARACTER SYSTEM
---==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "AntiAFK",
-        Enable = EnableAntiAFK,
-        Disable = DisableAntiAFK,
-        IsEnabled = function() return AntiAFKEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            -- ✅ AntiAFK មិនត្រូវការ Re-Apply ពិសេស
-            -- ព្រោះ Methods មិនប្រើ Humanoid
-            -- ប៉ុន្តែយើងបន្ថែមសម្រាប់ការធានា
-            if Hum then
-                pcall(function()
-                    Hum:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-                    Hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                    Hum.BreakJointsOnDeath = false
-                    Hum.RequiresNeck = false
-                end)
-            end
-        end
-    })
-end
 
 print("✅ AntiAFK Feature Loaded (3 Methods + Register)")
