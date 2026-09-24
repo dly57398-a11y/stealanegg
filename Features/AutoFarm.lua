@@ -244,30 +244,4 @@ _G.YOKUDO_AutoFarm = {
     FormatMoney = FormatMoney
 }
 
---==================================================
--- REGISTER WITH CHARACTER SYSTEM
---==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "AutoFarm",
-        Enable = EnableAutoFarm,
-        Disable = DisableAutoFarm,
-        IsEnabled = function() return AutoFarmEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            -- ✅ AutoFarm មិនត្រូវការ Re-Apply ពិសេស
-            -- ព្រោះវាគ្រាន់តែ Scan Eggs និង Select
-            -- TeleportSystem ជាអ្នកធ្វើការ
-            if AutoFarmEnabled and SelectedEgg then
-                task.wait(2)
-                pcall(function()
-                    -- Restart Teleport បើកំពុងប្រើ
-                    if _G.YOKUDO_TeleportSystem and _G.YOKUDO_TeleportSystem.IsEnabled() then
-                        StartTeleport()
-                    end
-                end)
-            end
-        end
-    })
-end
-
 print("✅ AutoFarm Feature Loaded (Register)")
