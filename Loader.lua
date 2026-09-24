@@ -1,22 +1,4 @@
 -- ==================================================
--- YOKUDO HUB | STEAL AN EGG | Loader
--- ✅ Load CharacterSystem មុន Features
--- ==================================================
-
-local BASE_URL = "https://raw.githubusercontent.com/betdoyvaka/stealanegg/main/"
-
-_G.YOKUDO_EnablePrint = false
-
-local oldPrint = print
-print = function(...)
-    if _G.YOKUDO_EnablePrint then
-        oldPrint(...)
-    end
-end
-
-print("🔵 Loading YOKUDO HUB...")
-
--- ==================================================
 -- CACHE SYSTEM
 -- ==================================================
 _G.YOKUDO_Cache = _G.YOKUDO_Cache or {}
@@ -211,9 +193,9 @@ loadstring(GetScript("Features/AutoAttack.lua"))()
 Loading.Update(48)
 loadstring(GetScript("Features/AFKSystem.lua"))()
 
--- ✅ EggCheckPremium (មុន FarmingManager)
+-- ✅ VIPTP (AFK Farm Only) — ជំនួស EggCheckPremium
 Loading.Update(50)
-loadstring(GetScript("Features/EggCheckPremium.lua"))()
+loadstring(GetScript("Features/VIPTP.lua"))()
 
 Loading.Update(51)
 loadstring(GetScript("Features/AttackDrone.lua"))()
@@ -224,7 +206,7 @@ loadstring(GetScript("Features/ManagerDrone.lua"))()
 Loading.Update(57)
 loadstring(GetScript("Features/ManualFastClick.lua"))()
 
--- ✅ FarmingManager (ប្រើ TeleportSystem + EggCheckPremium)
+-- ✅ FarmingManager (ប្រើ VIPTP + EggCheck Logic ខាងក្នុង)
 Loading.Update(59)
 loadstring(GetScript("Features/FarmingManager.lua"))()
 
