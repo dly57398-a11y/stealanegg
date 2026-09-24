@@ -1,7 +1,11 @@
 -- ==================================================
--- YOKUDO HUB | FEATURE | Farming Manager
--- ✅ SelfFlyTP ទៅ Safe Zone ប្រើ Speed 500
--- ✅ មិន Lock ពេលដល់ Safe Zone
+-- YOKUDO HUB | FEATURE | Farming Manager (NEW)
+-- បញ្ចូល Egg Check Logic ពី EggCheckPremium
+-- គ្រប់គ្រង Day/Night
+-- ហៅ AFKSystem ពេលអត់ឃើញ Egg
+-- ហៅ VIPTP ពេលឃើញ Egg + Day
+-- Night Check: 0.05s | Day Check: 0.5s
+-- ✅ Callback ពី VIPTP ពេល AutoStop
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -25,19 +29,150 @@ if not AreaEggCycle then
 end
 
 -- ==================================================
--- FIXED SETTINGS
+-- SETTINGS
 -- ==================================================
 local NIGHT_CHECK_INTERVAL = 0.05
 local DAY_CHECK_INTERVAL = 0.5
 local SAFE_ZONE = Vector3.new(533, 70, -366)
 local SAFE_ZONE_DIST = 5
-local SAFE_WAIT_AFTER_REACH = 5
-
-local FLY_SPEED = 1000       -- ✅ សម្រាប់ TeleportSystem
-local SAFE_FLY_SPEED = 500   -- ✅ សម្រាប់ Fly ទៅ Safe Zone (ថ្មី)
-local RETURN_SPEED = 600
-local FLY_OFFSET = 10
+local SAFE_WAIT_AFTER_REACH = 1
+local FLY_SPEED = 1000
+local SAFE_FLY_SPEED = 500
+local RETURN_SPEED = 800
+local FLY_OFFSET = 15
 local METHOD = "InstantTeleport"
+
+-- ==================================================
+-- EGG CHECK PREMIUM (បញ្ចូលក្នុង FarmingManager)
+-- ==================================================
+local SelectedRarities = { Divine = true, Eternal = true, Secret = true }
+
+local MeshIdMap = {}
+local MeshIdMapBuilt = false
+
+local RARITY_PRIORITY = {
+    Divine = 1,
+    Eternal = 2,
+    Secret = 3
+}
+
+local function BuildMeshIdMap()
+    if MeshIdMapBuilt then return end
+
+    local Assets = ReplicatedStorage:FindFirstChild("Data")
+    if not Assets then return end
+    Assets = Assets:FindFirstChild("Assets")
+    if not Assets then return end
+    local Configs = Assets:FindFirstChild("Configs")
+    local EggModels = ReplicatedStorage:FindFirstChild("Assets")
+    if EggModels then EggModels = EggModels:FindFirstChild("Models") end
+    if EggModels then EggModels = EggModels:FindFirstChild("Eggs") end
+    if not Configs or not EggModels then return end
+
+    for _, Config in ipairs(Configs:GetChildren()) do
+        local Success, Module = pcall(function() return require(Config) end)
+        if Success and Module and Module.Egg then
+            local ModelName = Module.Egg.ModelName or Config.Name
+            local Template = EggModels:FindFirstChild(ModelName)
+            if Template then
+                for _, Desc in ipairs(Template:GetDescendants()) do
+                    if Desc:IsA("MeshPart") and Desc.MeshId ~= "" then
+                        MeshIdMap[Desc.MeshId] = Config.Name
+                    end
+                    if Desc:IsA("SpecialMesh") and Desc.MeshId ~= "" then
+                        MeshIdMap[Desc.MeshId] = Config.Name
+                    end
+                end
+            end
+        end
+    end
+
+    MeshIdMapBuilt = true
+    print("[FarmingManager] MeshId Map Built: " .. tostring(#Configs:GetChildren()) .. " Configs")
+end
+
+local function GetPetData(AssetCategory)
+    local Assets = ReplicatedStorage:FindFirstChild("Data")
+    if not Assets then return nil end
+    Assets = Assets:FindFirstChild("Assets")
+    if not Assets then return nil end
+    local Configs = Assets:FindFirstChild("Configs")
+    if not Configs then return nil end
+
+    local Config = Configs:FindFirstChild(AssetCategory)
+    if not Config then return nil end
+
+    local Success, Module = pcall(function() return require(Config) end)
+    if not Success or not Module then return nil end
+
+    return {
+        Rarity = Module.Rarity and (Module.Rarity._id or Module.Rarity.RarityId) or nil,
+        EarningRate = Module.EarningRate or 0,
+        DisplayName = Module.DisplayName or AssetCategory
+    }
+end
+
+local function FindAssetCategory(EggModel)
+    if not MeshIdMapBuilt then BuildMeshIdMap() end
+
+    for _, Desc in ipairs(EggModel:GetDescendants()) do
+        if Desc:IsA("MeshPart") and Desc.MeshId ~= "" then
+            local Cat = MeshIdMap[Desc.MeshId]
+            if Cat then return Cat end
+        end
+        if Desc:IsA("SpecialMesh") and Desc.MeshId ~= "" then
+            local Cat = MeshIdMap[Desc.MeshId]
+            if Cat then return Cat end
+        end
+    end
+    return nil
+end
+
+local function SortEggs(EggList)
+    table.sort(EggList, function(a, b)
+        local Pa = RARITY_PRIORITY[a.Rarity] or 999
+        local Pb = RARITY_PRIORITY[b.Rarity] or 999
+        if Pa ~= Pb then return Pa < Pb end
+        return a.EarningRate > b.EarningRate
+    end)
+end
+
+local function FindBestEgg()
+    local Container = workspace:FindFirstChild("AreaEggSlotsClient")
+    if not Container then return nil end
+
+    local EggList = {}
+
+    for _, Slot in ipairs(Container:GetChildren()) do
+        if Slot:IsA("Model") then
+            local Category = FindAssetCategory(Slot)
+            if Category then
+                local Data = GetPetData(Category)
+                if Data and SelectedRarities[Data.Rarity] then
+                    table.insert(EggList, {
+                        Slot = Slot,
+                        Uid = Slot.Name,
+                        Rarity = Data.Rarity,
+                        EarningRate = Data.EarningRate,
+                        DisplayName = Data.DisplayName
+                    })
+                end
+            end
+        end
+    end
+
+    if #EggList == 0 then return nil end
+    SortEggs(EggList)
+    return EggList[1]
+end
+
+local function SetRarities(List)
+    SelectedRarities = {}
+    for _, r in ipairs(List) do
+        SelectedRarities[r] = true
+    end
+    print("[FarmingManager] Rarities: " .. table.concat(List, ", "))
+end
 
 -- ==================================================
 -- STATE
@@ -46,14 +181,10 @@ local FarmingEnabled = false
 local CurrentState = "IDLE"
 local CurrentPhase = "UNKNOWN"
 local FarmingThread = nil
-local IsAtSafeZone = false
-local WaitingForDay = false
 local AFKStarted = false
 local PendingEggUid = nil
+local WaitingForVIPTP = false
 
--- ==================================================
--- FLY TP STATE
--- ==================================================
 local FlyConnection = nil
 local BodyVelocity = nil
 local BodyGyro = nil
@@ -106,7 +237,7 @@ local function CleanupFly()
 end
 
 -- ==================================================
--- ✅ SELF FLY TP (មាន Speed Parameter)
+-- SELF FLY TP
 -- ==================================================
 local function SelfFlyTP(Destination, Speed, Callback)
     CleanupFly()
@@ -186,7 +317,7 @@ local function GetPhase()
         local Success, IsNight = pcall(function()
             return AreaEggCycle.IsNightPhase(Workspace:GetServerTimeNow())
         end)
-        
+
         if Success then
             if IsNight then
                 return "Night"
@@ -195,11 +326,11 @@ local function GetPhase()
             end
         end
     end
-    
+
     local Success, Text = pcall(function()
         return Player.PlayerGui.HUD.GameHUD.BottomRight.NightTimer.Value.Text
     end)
-    
+
     if Success and Text then
         local M = tonumber(string.match(Text, "(%d+)m")) or 0
         local S = tonumber(string.match(Text, "(%d+)s")) or 0
@@ -210,28 +341,8 @@ local function GetPhase()
             return "Night"
         end
     end
-    
+
     return "UNKNOWN"
-end
-
-local function GetSecondsUntilReset()
-    if AreaEggCycle then
-        local Success, Sec = pcall(function()
-            return AreaEggCycle.SecondsUntilReset(Workspace:GetServerTimeNow())
-        end)
-        if Success then return Sec end
-    end
-    return 0
-end
-
--- ==================================================
--- FIND BEST EGG
--- ==================================================
-local function FindBestEgg()
-    if _G.YOKUDO_EggCheckPremium then
-        return _G.YOKUDO_EggCheckPremium.FindBestEgg()
-    end
-    return nil
 end
 
 -- ==================================================
@@ -259,6 +370,11 @@ local function StopAll()
         end
     end
 
+    if _G.YOKUDO_VIPTP and _G.YOKUDO_VIPTP.IsEnabled() then
+        _G.YOKUDO_VIPTP.Disable()
+        print("[FarmingManager] ✅ VIPTP Stopped")
+    end
+
     if _G.YOKUDO_TeleportSystem and _G.YOKUDO_TeleportSystem.IsEnabled() then
         _G.YOKUDO_TeleportSystem.Disable()
         print("[FarmingManager] ✅ TeleportSystem Stopped")
@@ -268,7 +384,7 @@ local function StopAll()
 end
 
 -- ==================================================
--- ✅ FLY TO SAFE ZONE AND WAIT (ប្រើ Speed 500)
+-- FLY TO SAFE ZONE AND WAIT
 -- ==================================================
 local function FlyToSafeZoneAndWait()
     local Hum, Root = GetHumanoid()
@@ -277,27 +393,22 @@ local function FlyToSafeZoneAndWait()
     local DistToSafe = (Root.Position - SAFE_ZONE).Magnitude
 
     if DistToSafe <= SAFE_ZONE_DIST then
-        IsAtSafeZone = true
         print("[FarmingManager] ✅ Already at Safe Zone")
         return true
     end
 
     print("[FarmingManager] Fly to Safe Zone (Speed: " .. SAFE_FLY_SPEED .. ")...")
 
-    -- ✅ ប្រើ SelfFlyTP ជាមួយ Speed 500
     SelfFlyTP(SAFE_ZONE, SAFE_FLY_SPEED, function()
-        IsAtSafeZone = true
         print("[FarmingManager] ✅ At Safe Zone")
     end)
 
-    -- រង់ចាំដល់ Safe Zone ពិតប្រាកដ
     local WaitTime = 0
     while FarmingEnabled and WaitTime < 10 do
         local Hum2, Root2 = GetHumanoid()
         if Root2 then
             local Dist = (Root2.Position - SAFE_ZONE).Magnitude
             if Dist <= SAFE_ZONE_DIST then
-                IsAtSafeZone = true
                 print("[FarmingManager] ✅ Reached Safe Zone (Dist: " .. math.floor(Dist) .. ")")
                 return true
             end
@@ -311,22 +422,55 @@ local function FlyToSafeZoneAndWait()
 end
 
 -- ==================================================
--- START TELEPORT
+-- START VIPTP
 -- ==================================================
-local function StartTeleport(EggUid)
-    if not _G.YOKUDO_TeleportSystem then
-        warn("[FarmingManager] TeleportSystem not loaded!")
+local function StartVIPTP(EggUid)
+    if not _G.YOKUDO_VIPTP then
+        warn("[FarmingManager] VIPTP not loaded!")
         return
     end
 
-    print("[FarmingManager] Starting Teleport:")
+    print("[FarmingManager] Starting VIPTP:")
     print("  - Target UID: " .. tostring(EggUid))
-    print("  - Method: " .. METHOD)
 
-    _G.YOKUDO_TeleportSystem.SetMethod(METHOD)
-    _G.YOKUDO_TeleportSystem.SetSpeed(FLY_SPEED)
-    _G.YOKUDO_TeleportSystem.SetTargetId(EggUid)
-    _G.YOKUDO_TeleportSystem.Enable()
+    WaitingForVIPTP = true
+    _G.YOKUDO_VIPTP.SetTargetId(EggUid)
+    _G.YOKUDO_VIPTP.Enable()
+end
+
+-- ==================================================
+-- ✅ CALLBACK ពី VIPTP (ពេល AutoStop)
+-- ==================================================
+local function OnVIPTPComplete()
+    if not FarmingEnabled then return end
+    if not WaitingForVIPTP then return end
+
+    WaitingForVIPTP = false
+    print("[FarmingManager] ✅ VIPTP Completed → Check New Egg")
+
+    -- ពិនិត្យ Egg ថ្មីភ្លាមៗ
+    local BestEgg = FindBestEgg()
+
+    if BestEgg then
+        print("[FarmingManager] New Egg Found: " .. BestEgg.DisplayName)
+        PendingEggUid = BestEgg.Uid
+
+        -- ហោះទៅ Safe Zone ជាមុន រួចចាប់ផ្តើម VIPTP
+        task.spawn(function()
+            local ReachedSafe = FlyToSafeZoneAndWait()
+            if ReachedSafe and PendingEggUid then
+                task.wait(SAFE_WAIT_AFTER_REACH)
+                StartVIPTP(PendingEggUid)
+                PendingEggUid = nil
+            end
+        end)
+    else
+        print("[FarmingManager] No New Egg → AFK")
+        if _G.YOKUDO_AFKSystem and not _G.YOKUDO_AFKSystem.IsEnabled() then
+            _G.YOKUDO_AFKSystem.Enable()
+            AFKStarted = true
+        end
+    end
 end
 
 -- ==================================================
@@ -378,21 +522,20 @@ local function NightLoop()
             local ReachedSafe = FlyToSafeZoneAndWait()
 
             if ReachedSafe then
-                print("[FarmingManager] Waiting 5s at Safe Zone...")
+                print("[FarmingManager] Waiting at Safe Zone for Day...")
                 task.wait(SAFE_WAIT_AFTER_REACH)
 
                 local IsDay = WaitForDay()
 
                 if IsDay and PendingEggUid then
-                    print("[FarmingManager] ✅ Day Reached → Start Teleport")
-                    StartTeleport(PendingEggUid)
-
-                    while _G.YOKUDO_TeleportSystem and _G.YOKUDO_TeleportSystem.IsEnabled() do
-                        task.wait(0.5)
-                        if not FarmingEnabled then break end
-                    end
-
+                    print("[FarmingManager] ✅ Day Reached → Start VIPTP")
+                    StartVIPTP(PendingEggUid)
                     PendingEggUid = nil
+
+                    -- រង់ចាំ VIPTP ចប់ (Callback នឹងហៅ OnVIPTPComplete)
+                    while WaitingForVIPTP and FarmingEnabled do
+                        task.wait(0.5)
+                    end
                 end
             end
 
@@ -402,7 +545,7 @@ local function NightLoop()
                 if _G.YOKUDO_AFKSystem and not _G.YOKUDO_AFKSystem.IsEnabled() then
                     _G.YOKUDO_AFKSystem.Enable()
                     AFKStarted = true
-                    print("[FarmingManager] AFK Started")
+                    print("[FarmingManager] AFK Started (No Egg)")
                 end
             end
         end
@@ -437,16 +580,17 @@ local function DayLoop()
             FlyToSafeZoneAndWait()
             task.wait(1)
 
-            StartTeleport(BestEgg.Uid)
+            StartVIPTP(BestEgg.Uid)
 
-            while _G.YOKUDO_TeleportSystem and _G.YOKUDO_TeleportSystem.IsEnabled() do
+            -- រង់ចាំ VIPTP ចប់ (Callback នឹងហៅ OnVIPTPComplete)
+            while WaitingForVIPTP and FarmingEnabled do
                 task.wait(0.5)
-                if not FarmingEnabled then break end
             end
         else
             if _G.YOKUDO_AFKSystem and not _G.YOKUDO_AFKSystem.IsEnabled() then
                 _G.YOKUDO_AFKSystem.Enable()
                 AFKStarted = true
+                print("[FarmingManager] AFK Started (No Egg)")
             end
         end
 
@@ -462,10 +606,9 @@ local function MainLoop()
 
     while FarmingEnabled do
         local Phase = GetPhase()
-        local Sec = GetSecondsUntilReset()
         CurrentPhase = Phase
 
-        print("[FarmingManager] Phase: " .. Phase .. " | SecUntilReset: " .. math.floor(Sec))
+        print("[FarmingManager] Phase: " .. Phase)
 
         if Phase == "Day" then
             DayLoop()
@@ -487,6 +630,7 @@ local function Enable()
     CurrentState = "CHECK_TIME"
     AFKStarted = false
     PendingEggUid = nil
+    WaitingForVIPTP = false
 
     if FarmingThread then
         pcall(function() task.cancel(FarmingThread) end)
@@ -508,10 +652,9 @@ local function Disable()
 
     StopAll()
 
-    IsAtSafeZone = false
-    WaitingForDay = false
     AFKStarted = false
     PendingEggUid = nil
+    WaitingForVIPTP = false
     CurrentState = "IDLE"
     CurrentPhase = "UNKNOWN"
     print("[YOKUDO] FarmingManager: OFF")
@@ -519,13 +662,6 @@ end
 
 local function Toggle()
     if FarmingEnabled then Disable() else Enable() end
-end
-
-local function SetRarities(List)
-    if _G.YOKUDO_EggCheckPremium then
-        _G.YOKUDO_EggCheckPremium.SetRarities(List)
-    end
-    print("[YOKUDO] FarmingManager Rarities: " .. table.concat(List, ", "))
 end
 
 -- ==================================================
@@ -539,14 +675,16 @@ _G.YOKUDO_FarmingManager = {
     SetRarities = SetRarities,
     GetState = function() return CurrentState end,
     GetPhase = function() return CurrentPhase end,
-    GetSecondsUntilReset = GetSecondsUntilReset,
+    FindBestEgg = FindBestEgg,
     NIGHT_CHECK_INTERVAL = NIGHT_CHECK_INTERVAL,
     DAY_CHECK_INTERVAL = DAY_CHECK_INTERVAL,
     FLY_SPEED = FLY_SPEED,
     SAFE_FLY_SPEED = SAFE_FLY_SPEED,
     RETURN_SPEED = RETURN_SPEED,
     FLY_OFFSET = FLY_OFFSET,
-    METHOD = METHOD
+    METHOD = METHOD,
+    -- ✅ Callback សម្រាប់ VIPTP
+    OnVIPTPComplete = OnVIPTPComplete,
 }
 
 -- ==================================================
@@ -570,4 +708,12 @@ if _G.YOKUDO_CharacterSystem then
     })
 end
 
-print("✅ FarmingManager Feature Loaded (Safe Zone Speed 500 + No Lock)")
+-- ==================================================
+-- BUILD MESHID MAP ON LOAD
+-- ==================================================
+task.spawn(function()
+    task.wait(2)
+    BuildMeshIdMap()
+end)
+
+print("✅ FarmingManager Loaded (Egg Check + Day/Night + AFK + VIPTP + Callback)")
