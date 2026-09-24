@@ -124,27 +124,6 @@ _G.YOKUDO_WalkSpeed = {
     GetValue = function() return WalkSpeedValue end
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "WalkSpeed",
-        Enable = EnableWalkSpeed,
-        Disable = DisableWalkSpeed,
-        IsEnabled = function() return WalkSpeedEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            if WalkSpeedEnabled then
-                task.wait(0.5)
-                if Hum then
-                    pcall(function()
-                        OriginalWalkSpeed = Hum.WalkSpeed
-                        Hum.WalkSpeed = WalkSpeedValue
-                    end)
-                end
-            end
-        end
-    })
-end
+
 
 print("✅ WalkSpeed Feature Loaded (Register)")
