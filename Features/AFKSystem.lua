@@ -328,29 +328,4 @@ _G.YOKUDO_AFKSystem = {
     SAFE_ZONE = SAFE_ZONE,
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "AFKSystem",
-        Enable = EnableAFK,
-        Disable = DisableAFK,
-        IsEnabled = function() return AFKEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            -- ✅ AFKSystem មិនត្រូវការ Re-Apply ពិសេស
-            -- ព្រោះវាប្រើ GetHumanoid() រាល់ពេល
-            if AFKEnabled then
-                task.wait(1)
-                pcall(function()
-                    -- Restart Distance Check
-                    if MyTreadmillPos then
-                        StartDistanceCheck()
-                    end
-                end)
-            end
-        end
-    })
-end
-
 print("✅ AFKSystem Feature Loaded (Fly Normal + Stop + Reset + Register)")
