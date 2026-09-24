@@ -717,36 +717,4 @@ _G.YOKUDO_AttackDrone = {
     FOLLOW_SPEED = FOLLOW_SPEED
 }
 
--- ==================================================
--- REGISTER WITH CHARACTER SYSTEM
--- ==================================================
-if _G.YOKUDO_CharacterSystem then
-    _G.YOKUDO_CharacterSystem:RegisterFeature({
-        Name = "AttackDrone",
-        Enable = StartAttack,
-        Disable = StopAttackDrone,
-        IsEnabled = function() return AttackDroneEnabled end,
-        OnCharacterAdded = function(Char, Hum, Root)
-            if AttackDroneEnabled then
-                task.wait(1)
-                CleanupMovers()
-                CurrentTarget = nil
-                CurrentTargetPriority = nil
-                CurrentSpawnIndex = 1
-                IsFlying = false
-                SpawnLoopRunning = false
-                LastFire = 0
-                TraceSequence = 0
-
-                SaveLiveStats()
-                StartAttackLoop()
-
-                task.spawn(function()
-                    InitialFlyAndStartLoop()
-                end)
-            end
-        end
-    })
-end
-
 print("✅ AttackDrone Feature Loaded (Logic ចាស់ទាំងស្រុង + Register)")
